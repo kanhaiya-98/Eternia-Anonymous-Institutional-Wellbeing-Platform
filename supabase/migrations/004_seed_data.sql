@@ -586,3 +586,42 @@ ON CONFLICT DO NOTHING;
 --
 -- Refer to supabase/README.md for full setup and verification instructions.
 -- =============================================================================
+
+-- =============================================================================
+-- SECTION 7: TEST ADMIN / DOCTOR / SPOC / INTERN USERS
+-- =============================================================================
+-- Since Supabase Edge Functions / Admin API sometimes choke on newly created 
+-- triggers immediately after migration, we seed the 4 role test users down here
+-- natively so they are part of the initial DB state.
+--
+-- Passwords for all accounts: password123
+-- =============================================================================
+
+DO $$
+DECLARE
+  v_demo_inst_id UUID := 'a1b2c3d4-0001-0001-0001-000000000001';
+BEGIN
+  -- We insert directly into auth.users. The `handle_new_user` DB trigger 
+  -- will automatically create the corresponding public.users rows!
+  
+  -- ADMIN
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
+  VALUES ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', 'admin_1@eternia.app', crypt('password123', gen_salt('bf')), NOW(), '{"provider": "email", "providers": ["email"]}', jsonb_build_object('username', 'admin_1', 'role', 'ADMIN', 'institution_id', v_demo_inst_id), NOW(), NOW(), '', '', '', '')
+  ON CONFLICT DO NOTHING;
+
+  -- EXPERT
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
+  VALUES ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', 'expert_1@eternia.app', crypt('password123', gen_salt('bf')), NOW(), '{"provider": "email", "providers": ["email"]}', jsonb_build_object('username', 'expert_1', 'role', 'EXPERT', 'institution_id', v_demo_inst_id), NOW(), NOW(), '', '', '', '')
+  ON CONFLICT DO NOTHING;
+
+  -- SPOC
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
+  VALUES ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', 'spoc_1@eternia.app', crypt('password123', gen_salt('bf')), NOW(), '{"provider": "email", "providers": ["email"]}', jsonb_build_object('username', 'spoc_1', 'role', 'SPOC', 'institution_id', v_demo_inst_id), NOW(), NOW(), '', '', '', '')
+  ON CONFLICT DO NOTHING;
+  
+  -- INTERN
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
+  VALUES ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', 'intern_1@eternia.app', crypt('password123', gen_salt('bf')), NOW(), '{"provider": "email", "providers": ["email"]}', jsonb_build_object('username', 'intern_1', 'role', 'INTERN', 'institution_id', v_demo_inst_id), NOW(), NOW(), '', '', '', '')
+  ON CONFLICT DO NOTHING;
+
+END $$;

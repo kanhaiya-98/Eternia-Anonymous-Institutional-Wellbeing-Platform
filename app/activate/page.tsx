@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Eye, EyeOff, UserPlus, User, Lock, CheckCircle2, Sparkles } from "lucide-react";
+import { signUp } from "@/lib/auth";
 
 export default function ActivateAccountPage() {
   const router = useRouter();
@@ -17,9 +18,30 @@ export default function ActivateAccountPage() {
 
   const isFormValid = username.trim().length > 0 && password.length > 0;
 
-  const handleSubmit = () => {
-    if (!isFormValid) return;
-    // Auth bypassed — go straight to login
+  const handleSubmit = async () => {
+    if (!isFormValid || password !== confirmPassword) {
+      if (password !== confirmPassword) setError("Passwords do not match");
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    const eterniaCode = sessionStorage.getItem("eternia_code") || "UNKNOWN";
+    
+    const { error: signUpError } = await signUp({
+      username,
+      password,
+      institutionId: eterniaCode
+    });
+    
+    setIsLoading(false);
+    
+    if (signUpError) {
+      setError(signUpError);
+      return;
+    }
+    
     router.push("/login");
   };
 

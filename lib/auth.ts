@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Validate an Eternia institution code against the Supabase `institutions` table.
@@ -8,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 export async function validateEterniaCode(
   code: string,
 ): Promise<{ id: string; name: string } | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("institutions")
@@ -46,28 +48,51 @@ export async function signUp(params: {
   deviceFingerprint?: string;
 }): Promise<{ error: string | null }> {
   const { username, password, institutionId, deviceFingerprint } = params;
-  const supabase = createClient();
+  
+  // Use the service role client so we can use the Admin API to create users and auto-confirm them
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!serviceRoleKey) {
+    return { error: "Server configuration error: Service role key is missing." };
+  }
+  
+  const adminAuthClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
 
-  // ── Step 1: Create the Supabase Auth user ─────────────────────────────────
-  // The metadata object is picked up by the `handle_new_user` trigger defined
-  // in supabase/migrations/003_functions_and_triggers.sql.
-  // The trigger inserts the public.users row — we must NOT insert manually here
-  // to avoid a primary-key conflict.
-  const { data, error: authError } = await supabase.auth.signUp({
+  // ── Step 0: Resolve the institution code to a UUID ─────────────────────
+  // The frontend passes the eternia_code (e.g., 'DEMO2025') as institutionId,
+  // but the DB trigger requires a valid UUID. We must look it up first.
+  const { data: instData, error: instError } = await adminAuthClient
+    .from("institutions")
+    .select("id")
+    .eq("eternia_code", institutionId)
+    .single();
+
+  if (instError || !instData) {
+    return { error: "Invalid or expired institution code. Please scan again." };
+  }
+
+  const realInstitutionUuid = instData.id;
+
+  // ── Step 1: Create the Supabase Auth user via Admin API ─────────────────
+  // This bypasses the rate limits and requires no email confirmation.
+  const { data, error: authError } = await adminAuthClient.auth.admin.createUser({
     email: `${username.trim().toLowerCase()}@eternia.app`,
     password,
-    options: {
-      data: {
-        username: username.trim().toLowerCase(),
-        institution_id: institutionId,
-        role: "STUDENT",
-      },
+    email_confirm: true, // Auto-confirm dummy email
+    user_metadata: {
+      username: username.trim().toLowerCase(),
+      institution_id: realInstitutionUuid,
+      role: "STUDENT",
     },
   });
 
   if (authError) {
     // Surface a user-friendly message without leaking internal details.
-    if (authError.message.toLowerCase().includes("already registered")) {
+    if (authError.message.toLowerCase().includes("already registered") || authError.status === 422) {
       return {
         error: "This username is already taken. Please choose a different one.",
       };
@@ -81,19 +106,13 @@ export async function signUp(params: {
   }
 
   // ── Step 2 (optional): Patch device fingerprint ───────────────────────────
-  // The trigger creates the users row without the device fingerprint because
-  // the fingerprint is generated client-side after auth. We patch it now.
   if (deviceFingerprint) {
-    // Small delay to ensure the trigger has committed the users row before
-    // we attempt an UPDATE (trigger runs synchronously, but belt-and-suspenders).
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    await supabase
+    await adminAuthClient
       .from("users")
       .update({ device_id_encrypted: deviceFingerprint })
       .eq("id", authUser.id);
-    // Non-fatal: if this UPDATE fails, the account is still valid.
-    // The device binding will be patched on next login.
   }
 
   return { error: null };
@@ -110,7 +129,7 @@ export async function signIn(
   username: string,
   password: string,
 ): Promise<{ error: string | null }> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({
     email: `${username.trim().toLowerCase()}@eternia.app`,
@@ -118,6 +137,7 @@ export async function signIn(
   });
 
   if (error) {
+    console.error("signIn error:", error);
     // Return a generic message to prevent user enumeration.
     return { error: "Invalid username or password. Please try again." };
   }
@@ -129,7 +149,7 @@ export async function signIn(
  * Sign out the currently authenticated user and clear the Supabase session.
  */
 export async function signOut(): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.auth.signOut();
 }
 
@@ -138,7 +158,7 @@ export async function signOut(): Promise<void> {
  * Returns null if the user is not authenticated.
  */
 export async function getCurrentAuthUser() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -150,20 +170,25 @@ export async function getCurrentAuthUser() {
  * Returns null if unauthenticated or if the record doesn't exist yet.
  */
 export async function getCurrentUserProfile(): Promise<{
-  id: string;
-  username: string;
-  role: string;
-  institution_id: string | null;
-  apaar_verified: boolean;
-  erp_verified: boolean;
-  created_at: string;
-} | null> {
-  const supabase = createClient();
+  data: {
+    id: string;
+    username: string;
+    role: string;
+    institution_id: string | null;
+    apaar_verified: boolean;
+    erp_verified: boolean;
+    created_at: string;
+  } | null;
+  error: string | null;
+}> {
+  const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) {
+    return { data: null, error: "DEBUG: No user from supabase.auth.getUser()" };
+  }
 
   const { data, error } = await supabase
     .from("users")
@@ -173,15 +198,24 @@ export async function getCurrentUserProfile(): Promise<{
     .eq("id", user.id)
     .single();
 
-  if (error || !data) return null;
+  if (error) {
+    return { data: null, error: `DEBUG: DB Error: ${error.message}` };
+  }
+  
+  if (!data) {
+    return { data: null, error: "DEBUG: DB query returned NO DATA" };
+  }
 
   return {
-    id: data.id as string,
-    username: data.username as string,
-    role: data.role as string,
-    institution_id: data.institution_id as string | null,
-    apaar_verified: data.apaar_verified as boolean,
-    erp_verified: data.erp_verified as boolean,
-    created_at: data.created_at as string,
+    data: {
+      id: data.id as string,
+      username: data.username as string,
+      role: data.role as string,
+      institution_id: data.institution_id as string | null,
+      apaar_verified: data.apaar_verified as boolean,
+      erp_verified: data.erp_verified as boolean,
+      created_at: data.created_at as string,
+    },
+    error: null
   };
 }

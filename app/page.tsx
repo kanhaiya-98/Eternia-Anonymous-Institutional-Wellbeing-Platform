@@ -15,11 +15,8 @@ export default function EnterCodePage() {
   const handleSubmit = () => {
     if (!eterniaCode.trim()) return;
 
-    // Auth bypassed — accept any code and proceed
-    sessionStorage.setItem(
-      "eternia_institution",
-      JSON.stringify({ id: "demo-institution", name: "Demo University" }),
-    );
+    // Save the Eternia Code to be used on the registration page
+    sessionStorage.setItem("eternia_code", eterniaCode.trim());
 
     router.push("/scan");
   };

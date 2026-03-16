@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Eye, EyeOff, LogIn, Lock, User, Sparkles } from "lucide-react";
+import { signIn, getCurrentUserProfile } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,10 +17,49 @@ export default function LoginPage() {
 
   const isFormValid = username.trim().length > 0 && password.length > 0;
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!isFormValid) return;
-    // Auth bypassed — go straight to dashboard
-    router.push("/dashboard");
+    setIsLoading(true);
+    setError(null);
+    
+    const { error: signInError } = await signIn(username, password);
+    
+    if (signInError) {
+      setIsLoading(false);
+      setError(signInError);
+      return;
+    }
+
+    // Fetch the user profile to determine their role
+    const profileRes = await getCurrentUserProfile();
+    if (!profileRes.data) {
+      setIsLoading(false);
+      setError(`Failed to retrieve user profile: ${profileRes.error}`);
+      return;
+    }
+    
+    setIsLoading(false);
+
+    // Route based on role
+    switch (profileRes.data.role) {
+      case "STUDENT":
+        router.push("/dashboard");
+        break;
+      case "INTERN":
+        router.push("/dashboard/intern");
+        break;
+      case "EXPERT":
+        router.push("/dashboard/doctor");
+        break;
+      case "SPOC":
+        router.push("/dashboard/spoc");
+        break;
+      case "ADMIN":
+        router.push("/dashboard/admin");
+        break;
+      default:
+        router.push("/dashboard");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
