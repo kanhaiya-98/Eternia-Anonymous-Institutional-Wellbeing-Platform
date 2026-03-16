@@ -3,14 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { QrCode, ArrowLeft, AlertTriangle } from "lucide-react";
+import { QrCode, ArrowLeft, AlertTriangle, Scan } from "lucide-react";
 
 export default function ScanPage() {
   const router = useRouter();
@@ -26,92 +19,129 @@ export default function ScanPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-secondary via-background to-muted">
+    <div className="relative min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden bg-background noise-bg">
+      {/* Animated gradient orbs */}
+      <div className="orb orb-1 w-[500px] h-[500px] -top-32 -left-40 opacity-50" />
+      <div className="orb orb-2 w-[400px] h-[400px] -bottom-24 -right-28 opacity-45" />
+
       {/* Back button */}
-      <Button
-        variant="ghost"
-        className="absolute top-4 left-4 text-muted-foreground hover:text-foreground"
+      <button
+        className="absolute top-5 left-5 z-20 flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
         onClick={() => router.push("/")}
       >
-        <ArrowLeft className="w-4 h-4 mr-2" />
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
         Back
-      </Button>
+      </button>
 
-      {/* Logo */}
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">
-          Eternia
-        </h1>
-        <p className="text-muted-foreground mt-2 text-sm md:text-base">
-          Verify your identity
-        </p>
-      </div>
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center">
+        {/* Logo */}
+        <div className="mb-10 text-center fade-in-up">
+          <div
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
+            style={{ background: "var(--gradient-hero)" }}
+          >
+            <Scan className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-5xl font-black tracking-tight gradient-text leading-none">
+            Eternia
+          </h1>
+          <p className="text-muted-foreground mt-3 text-sm font-medium">
+            Verify your identity
+          </p>
+        </div>
 
-      <Card className="w-full max-w-md shadow-xl border-border/50 backdrop-blur-sm bg-card/90">
-        <CardHeader className="text-center pb-4">
-          <CardTitle className="text-2xl text-foreground">Scan Now</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Point your camera at the QR code provided by your institution
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* QR Scanner Window */}
-          <div className="aspect-square rounded-xl border-2 border-dashed border-primary/50 flex items-center justify-center bg-muted/30 relative overflow-hidden">
-            {isScanning ? (
-              <div className="text-center space-y-4">
-                {/* Scanning animation */}
-                <div className="relative w-32 h-32">
-                  <div className="absolute inset-0 border-4 border-primary rounded-lg" />
-                  {/* Replaced <style jsx> keyframe with Tailwind animate-bounce */}
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-primary animate-bounce" />
-                </div>
-                <p className="text-primary font-medium">Scanning...</p>
-              </div>
-            ) : (
-              <div className="text-center space-y-4 p-8">
-                <QrCode className="w-24 h-24 text-muted-foreground mx-auto" />
-                <p className="text-muted-foreground text-sm">
-                  QR Scanning Window
-                </p>
-              </div>
-            )}
+        {/* Glass Card */}
+        <div className="glass w-full rounded-2xl p-8 shadow-2xl gradient-border fade-in-up fade-in-up-delay-1">
+          <div className="mb-6 text-center">
+            <h2 className="text-2xl font-bold text-foreground tracking-tight">Scan Now</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Point your camera at the QR code provided by your institution
+            </p>
           </div>
 
-          <Button
-            onClick={handleScan}
-            disabled={isScanning}
-            className="w-full h-12 text-lg font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300"
-          >
-            {isScanning ? (
-              <span className="flex items-center gap-2">
-                <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                Scanning...
-              </span>
-            ) : (
-              "Scan Now"
-            )}
-          </Button>
+          <div className="space-y-6">
+            {/* QR Scanner Window */}
+            <div
+              className={`aspect-square rounded-2xl border-2 flex items-center justify-center relative overflow-hidden transition-all duration-500 ${
+                isScanning
+                  ? "border-primary/60 bg-primary/5"
+                  : "border-dashed border-border/60 bg-muted/20"
+              }`}
+            >
+              {isScanning ? (
+                <div className="relative w-full h-full flex flex-col items-center justify-center gap-4">
+                  {/* Corner frames */}
+                  {[
+                    "top-4 left-4 rounded-tl-lg border-t-2 border-l-2",
+                    "top-4 right-4 rounded-tr-lg border-t-2 border-r-2",
+                    "bottom-4 left-4 rounded-bl-lg border-b-2 border-l-2",
+                    "bottom-4 right-4 rounded-br-lg border-b-2 border-r-2",
+                  ].map((cls, i) => (
+                    <div key={i} className={`absolute w-7 h-7 border-primary ${cls}`} />
+                  ))}
 
-          {/* Disclaimer */}
-          <div className="bg-muted/50 rounded-lg p-4 border border-border">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">
-                  Disclaimer
-                </p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  By scanning this QR code, you confirm that you are a
-                  registered student of the partnering institution. Your
-                  identity will remain anonymous within the Eternia platform.
-                  The QR code is used solely for verification purposes and does
-                  not store any personal information.
-                </p>
+                  {/* Scanning beam */}
+                  <div
+                    className="scan-line absolute left-6 right-6 h-0.5 rounded-full"
+                    style={{
+                      background: "var(--gradient-hero)",
+                      boxShadow: "0 0 12px rgba(120,60,220,0.7)",
+                    }}
+                  />
+
+                  <div className="text-center z-10">
+                    <div className="w-10 h-10 border-2 border-primary/40 border-t-primary rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-sm font-semibold text-primary">Scanning...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center space-y-4 p-8">
+                  <QrCode className="w-20 h-20 text-muted-foreground/40 mx-auto" />
+                  <p className="text-sm text-muted-foreground font-medium">
+                    QR Scanning Window
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Scan Button */}
+            <button
+              onClick={handleScan}
+              disabled={isScanning}
+              className="btn-premium w-full h-12 rounded-xl font-semibold text-base text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {isScanning ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Scanning...
+                </span>
+              ) : (
+                <>
+                  <QrCode className="w-4 h-4" />
+                  Scan Now
+                </>
+              )}
+            </button>
+
+            {/* Disclaimer */}
+            <div className="rounded-xl border border-yellow-400/30 bg-yellow-50/60 dark:bg-yellow-950/20 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">Disclaimer</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    By scanning this QR code, you confirm that you are a
+                    registered student of the partnering institution. Your
+                    identity will remain anonymous within the Eternia platform.
+                    The QR code is used solely for verification purposes and does
+                    not store any personal information.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

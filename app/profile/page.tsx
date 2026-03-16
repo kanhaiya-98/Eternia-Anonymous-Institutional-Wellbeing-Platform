@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createClient } from "@/lib/supabase/client";
+
 import {
   User,
   Shield,
@@ -82,72 +82,37 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // ─── Fetch profile on mount ─────────────────────────────────────────────────
+  // ─── Fetch profile on mount (auth bypassed — mock data) ────────────────────
   const fetchProfile = useCallback(async () => {
-    const supabase = createClient();
     setLoading(true);
     setPageError(null);
 
     try {
-      // 1. Check auth session
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        router.push("/");
-        return;
-      }
-
-      // 2. Fetch user row + institution name in one query
-      const { data: userRow, error: userError } = await supabase
-        .from("users")
-        .select(
-          "id, username, role, apaar_verified, erp_verified, created_at, institutions(name)",
-        )
-        .eq("id", user.id)
-        .single();
-
-      if (userError || !userRow) {
-        setPageError("Could not load your profile. Please refresh the page.");
-        return;
-      }
-
-      const institutionRaw = Array.isArray(userRow.institutions)
-        ? ((userRow.institutions[0] as { name: string } | undefined) ?? null)
-        : (userRow.institutions as unknown as { name: string } | null);
+      // Auth bypassed: use mock profile
+      await new Promise((resolve) => setTimeout(resolve, 400));
 
       setProfile({
-        id: userRow.id as string,
-        username: userRow.username as string,
-        role: userRow.role as string,
-        apaar_verified: Boolean(userRow.apaar_verified),
-        erp_verified: Boolean(userRow.erp_verified),
-        created_at: userRow.created_at as string,
-        institution_name: institutionRaw?.name ?? null,
+        id: "demo-user-001",
+        username: "demo_user",
+        role: "STUDENT",
+        apaar_verified: false,
+        erp_verified: false,
+        created_at: new Date().toISOString(),
+        institution_name: "Demo University",
       });
 
-      setApaarVerified(Boolean(userRow.apaar_verified));
-
-      // 3. Fetch ECC balance from the materialized view
-      const { data: balanceRow } = await supabase
-        .from("credit_balance")
-        .select("balance, last_transaction_at")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      setApaarVerified(false);
 
       setCreditBalance({
-        balance: (balanceRow?.balance as number) ?? 0,
-        last_transaction_at:
-          (balanceRow?.last_transaction_at as string) ?? null,
+        balance: 250,
+        last_transaction_at: null,
       });
     } catch {
       setPageError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     fetchProfile();
@@ -160,22 +125,10 @@ export default function ProfilePage() {
     setIsVerifyingApaar(true);
 
     try {
-      // Phase 1: Simulated verification.
-      // Phase 2+: POST to institution APAAR / ABC ID validation endpoint.
+      // Auth bypassed: simulate verification locally
       await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const supabase = createClient();
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({ apaar_verified: true })
-        .eq("id", profile.id);
-
-      if (updateError) {
-        setPageError("Verification failed. Please try again.");
-      } else {
-        setApaarVerified(true);
-        setProfile((prev) => (prev ? { ...prev, apaar_verified: true } : prev));
-      }
+      setApaarVerified(true);
+      setProfile((prev) => (prev ? { ...prev, apaar_verified: true } : prev));
     } catch {
       setPageError("Verification failed. Please try again.");
     } finally {
@@ -216,26 +169,15 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+  const handleLogout = () => {
     router.push("/");
   };
 
-  const handleDeleteAccount = async () => {
+  const handleDeleteAccount = () => {
     const confirmed = window.confirm(
       "Are you sure you want to delete your account? This cannot be undone.",
     );
     if (!confirmed) return;
-
-    // Phase 1: Sign out and redirect.
-    // Phase 2+: Call a server-side API route that:
-    //   1. Hard-deletes user_private (DPDP Act erasure)
-    //   2. Soft-deletes users (is_active = false)
-    //   3. Anonymises credit_transactions (user_id → NULL)
-    //   4. Deletes the Supabase Auth user
-    const supabase = createClient();
-    await supabase.auth.signOut();
     router.push("/");
   };
 

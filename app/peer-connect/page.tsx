@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Navbar } from "@/components/navbar";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -25,6 +23,7 @@ import {
   Phone,
   CheckCircle,
   Users,
+  Sparkles,
 } from "lucide-react";
 
 interface PeerListener {
@@ -92,270 +91,322 @@ export default function PeerConnectPage() {
     setConnectionStep("select");
   };
 
+  const gradientPairs = [
+    "from-violet-500 to-purple-600",
+    "from-cyan-500 to-blue-600",
+    "from-fuchsia-500 to-pink-600",
+    "from-indigo-500 to-violet-600",
+    "from-emerald-500 to-teal-600",
+    "from-orange-500 to-amber-600",
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-hidden">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-            Peer Connect
+      {/* Page Hero */}
+      <div className="relative overflow-hidden noise-bg border-b border-border/40">
+        <div className="orb orb-1 w-72 h-72 -top-16 -left-16 opacity-40" />
+        <div className="orb orb-2 w-56 h-56 top-0 right-0 opacity-30" />
+        <div className="container mx-auto px-4 md:px-6 py-12 md:py-16 relative z-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: "var(--gradient-hero)" }}
+            >
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-sm font-semibold text-primary uppercase tracking-wider">Community Support</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight mb-3">
+            Peer <span className="gradient-text">Connect</span>
           </h1>
-          <p className="text-muted-foreground">
-            Connect with trained peer listeners who understand what you&apos;re
-            going through
+          <p className="text-muted-foreground text-base md:text-lg max-w-lg leading-relaxed">
+            Connect with trained peer listeners who understand what you&apos;re going through
           </p>
         </div>
+      </div>
 
+      <main className="container mx-auto px-4 md:px-6 py-10 space-y-8">
         {/* Info Banner */}
-        <div className="mb-8 rounded-xl bg-primary/5 p-4 border border-primary/10">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-medium text-foreground">
-                Safe & Confidential
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Our peer listeners are trained students who understand what
-                you&apos;re going through. All conversations are anonymous and
-                confidential.
-              </p>
-            </div>
+        <div
+          className="rounded-2xl border border-primary/15 p-5 flex items-start gap-4"
+          style={{
+            background: "linear-gradient(135deg, rgba(120,60,220,0.06), rgba(40,200,220,0.04))",
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+            style={{ background: "var(--gradient-hero)" }}
+          >
+            <Users className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="font-bold text-foreground text-sm">Safe & Confidential</h3>
+            <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">
+              Our peer listeners are trained students who understand what you&apos;re going through.
+              All conversations are anonymous and confidential.
+            </p>
           </div>
         </div>
 
         {/* Search & Filter */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search by name or topic..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12 bg-input/50 border-border"
+              className="pl-11 h-12 bg-background/60 border-border/60 rounded-xl focus:border-primary transition-all duration-200"
             />
           </div>
-          <Button variant="outline" className="h-12 border-border">
-            <Filter className="w-4 h-4 mr-2" />
+          <button className="inline-flex items-center gap-2 h-12 px-5 rounded-xl border border-border/60 text-sm font-semibold text-foreground hover:bg-primary/5 hover:border-primary/40 transition-all duration-200">
+            <Filter className="w-4 h-4 text-primary" />
             Filters
-          </Button>
+          </button>
         </div>
 
         {/* Listener Cards */}
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="h-16 w-16 rounded-full bg-muted" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 w-3/4 rounded bg-muted" />
-                      <div className="h-3 w-1/2 rounded bg-muted" />
-                    </div>
+              <div key={i} className="rounded-2xl border border-border/50 p-6 animate-pulse">
+                <div className="flex items-start gap-4">
+                  <div className="h-16 w-16 rounded-2xl bg-muted shrink-0" />
+                  <div className="flex-1 space-y-2.5">
+                    <div className="h-4 w-3/4 rounded-full bg-muted" />
+                    <div className="h-3 w-1/2 rounded-full bg-muted" />
+                    <div className="h-3 w-2/3 rounded-full bg-muted" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredListeners.map((listener) => (
-              <Card
+            {filteredListeners.map((listener, idx) => (
+              <div
                 key={listener.id}
-                className="cursor-pointer transition-all hover:border-primary hover:shadow-lg"
+                className="gradient-border portal-hover rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:border-primary/30"
                 onClick={() => handleConnect(listener)}
               >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-16 w-16 border-2 border-accent/20">
-                      <AvatarFallback className="bg-accent/10 text-lg font-semibold text-accent-foreground">
-                        {listener.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">
-                        {listener.name}
-                      </h3>
-
-                      {/* Good Listener Tag */}
+                <div className="p-6">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="relative shrink-0">
+                      <Avatar className="h-16 w-16 border-2 border-white/50 shadow-md">
+                        <AvatarFallback
+                          className={`text-lg font-black bg-gradient-to-br ${gradientPairs[idx % gradientPairs.length]} text-white`}
+                        >
+                          {listener.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      {listener.availability.toLowerCase().includes("available") && (
+                        <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-card" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-foreground text-sm tracking-tight">{listener.name}</h3>
                       {listener.is_good_listener && (
-                        <div className="mt-1 flex items-center gap-1">
+                        <div className="mt-0.5 flex items-center gap-1">
                           <Heart className="h-3 w-3 fill-pink-500 text-pink-500" />
-                          <span className="text-xs font-medium text-pink-600">
+                          <span className="text-xs font-semibold text-pink-600 dark:text-pink-400">
                             Good Listener
                           </span>
                         </div>
                       )}
-
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <p className="mt-1 text-xs text-muted-foreground font-medium leading-snug">
                         {listener.specialization}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium">
-                            {listener.rating}
-                          </span>
+                        <div className="flex items-center gap-0.5">
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                          <span className="text-xs font-bold">{listener.rating}</span>
                         </div>
-                        <span className="text-muted-foreground">·</span>
-                        <span className="text-sm text-muted-foreground">
-                          {listener.sessions_completed} sessions
-                        </span>
+                        <span className="text-muted-foreground text-xs">·</span>
+                        <span className="text-xs text-muted-foreground">{listener.sessions_completed} sessions</span>
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center justify-between">
+
+                  <div className="flex items-center justify-between pt-3 border-t border-border/40">
                     <Badge
-                      variant={
-                        listener.availability === "Available"
-                          ? "default"
-                          : "secondary"
-                      }
-                      className="rounded-full"
+                      className={`rounded-xl text-xs font-semibold px-2.5 py-1 flex items-center gap-1 ${
+                        listener.availability.toLowerCase().includes("available")
+                          ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-800/40"
+                          : "bg-muted text-muted-foreground border-border/50"
+                      }`}
+                      variant="outline"
                     >
-                      <Clock className="mr-1 h-3 w-3" />
+                      <Clock className="w-3 h-3" />
                       {listener.availability}
                     </Badge>
-                    <Button size="sm" className="rounded-full">
+                    <button className="btn-premium inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white">
                       Connect
-                    </Button>
+                    </button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
 
         {filteredListeners.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              No listeners found matching your search.
-            </p>
+          <div className="text-center py-16">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: "linear-gradient(135deg, rgba(120,60,220,0.1), rgba(40,200,220,0.08))" }}
+            >
+              <Search className="w-8 h-8 text-muted-foreground/60" />
+            </div>
+            <p className="text-muted-foreground font-medium">No listeners found matching your search.</p>
+            <p className="text-sm text-muted-foreground/60 mt-1">Try a different name or topic</p>
           </div>
         )}
       </main>
 
       {/* Connection Dialog */}
       <Dialog open={!!selectedListener} onOpenChange={closeDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md glass border-border/60 rounded-2xl shadow-2xl">
           {connectionStep === "connecting" ? (
             <div className="flex flex-col items-center py-12 text-center">
               <div className="relative mb-6">
-                <div className="h-20 w-20 animate-ping rounded-full bg-primary/20 absolute inset-0" />
-                <Avatar className="relative h-20 w-20 border-4 border-primary">
-                  <AvatarFallback className="bg-primary/10 text-xl text-primary">
+                <div className="h-24 w-24 animate-ping rounded-full bg-primary/15 absolute inset-0" />
+                <Avatar className="relative h-24 w-24 border-4 border-primary/30 shadow-xl">
+                  <AvatarFallback
+                    className="text-2xl font-black"
+                    style={{ background: "var(--gradient-hero)", color: "white" }}
+                  >
                     {selectedListener?.initials}
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <DialogTitle className="text-xl">Connecting...</DialogTitle>
+              <DialogTitle className="text-xl font-bold">Connecting...</DialogTitle>
               <DialogDescription className="mt-2">
-                Please wait while we connect you with {selectedListener?.name}
+                Connecting you with {selectedListener?.name}
               </DialogDescription>
             </div>
           ) : connectionStep === "connected" ? (
-            <div className="flex flex-col items-center py-8 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="flex flex-col items-center py-10 text-center">
+              <div
+                className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg"
+                style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
+              >
+                <CheckCircle className="h-8 w-8 text-white" />
               </div>
-              <DialogTitle className="text-xl">Connected!</DialogTitle>
-              <DialogDescription className="mt-2">
-                You are now connected with {selectedListener?.name}. Remember,
-                this is a safe space.
+              <DialogTitle className="text-xl font-bold">Connected!</DialogTitle>
+              <DialogDescription className="mt-2 max-w-xs">
+                You are now connected with {selectedListener?.name}. Remember, this is a safe space.
               </DialogDescription>
-              <Button className="mt-6 w-full" onClick={closeDialog}>
+              <button
+                className="btn-premium mt-6 w-full h-12 rounded-xl font-semibold text-white"
+                onClick={closeDialog}
+              >
                 Start Conversation
-              </Button>
+              </button>
             </div>
           ) : (
             <>
               <DialogHeader>
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-14 w-14">
-                    <AvatarFallback className="bg-accent/10 text-accent-foreground">
+                  <Avatar className="h-14 w-14 border-2 border-primary/20">
+                    <AvatarFallback
+                      className="font-black text-lg"
+                      style={{ background: "var(--gradient-hero)", color: "white" }}
+                    >
                       {selectedListener?.initials}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <DialogTitle className="flex items-center gap-2">
+                    <DialogTitle className="flex items-center gap-2 font-bold">
                       {selectedListener?.name}
                       {selectedListener?.is_good_listener && (
-                        <Badge variant="secondary" className="gap-1 text-xs">
+                        <Badge
+                          variant="secondary"
+                          className="gap-1 text-xs rounded-full bg-pink-50 dark:bg-pink-950/30 text-pink-600 border-pink-200/50"
+                        >
                           <Heart className="h-3 w-3 fill-pink-500 text-pink-500" />
                           Good Listener
                         </Badge>
                       )}
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-xs font-medium mt-0.5">
                       {selectedListener?.specialization}
                     </DialogDescription>
                   </div>
                 </div>
               </DialogHeader>
 
-              <div className="space-y-6 py-4">
+              <div className="space-y-5 py-3">
                 {/* Bio */}
-                <div className="rounded-lg bg-muted/50 p-4">
-                  <p className="text-sm text-muted-foreground">
-                    {selectedListener?.bio}
-                  </p>
+                <div
+                  className="rounded-xl p-4 text-sm text-muted-foreground leading-relaxed"
+                  style={{ background: "linear-gradient(135deg, rgba(120,60,220,0.05), rgba(40,200,220,0.04))" }}
+                >
+                  {selectedListener?.bio}
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-lg border p-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-semibold">
-                        {selectedListener?.rating}
-                      </span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-border/50 p-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1 mb-0.5">
+                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      <span className="font-black text-lg">{selectedListener?.rating}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Rating</p>
+                    <p className="text-xs text-muted-foreground font-medium">Rating</p>
                   </div>
-                  <div className="rounded-lg border p-3 text-center">
-                    <div className="font-semibold">
+                  <div className="rounded-xl border border-border/50 p-3.5 text-center">
+                    <div className="font-black text-lg mb-0.5">
                       {selectedListener?.sessions_completed}
                     </div>
-                    <p className="text-xs text-muted-foreground">Sessions</p>
+                    <p className="text-xs text-muted-foreground font-medium">Sessions</p>
                   </div>
                 </div>
 
                 {/* Connection Type */}
                 <div className="space-y-3">
-                  <label className="text-sm font-medium">
+                  <label className="text-sm font-semibold text-foreground">
                     How would you like to connect?
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant={
-                        connectionType === "chat" ? "default" : "outline"
-                      }
-                      className="flex-col gap-1 py-4"
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
                       onClick={() => setConnectionType("chat")}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 font-semibold text-sm transition-all duration-200 ${
+                        connectionType === "chat"
+                          ? "border-primary/0 text-white shadow-md"
+                          : "border-border/60 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                      }`}
+                      style={
+                        connectionType === "chat"
+                          ? { background: "var(--gradient-hero)", boxShadow: "0 4px 16px var(--glow-primary)" }
+                          : {}
+                      }
                     >
                       <MessageCircle className="h-5 w-5" />
-                      <span className="text-xs">Text Chat</span>
-                    </Button>
-                    <Button
-                      variant={
-                        connectionType === "voice" ? "default" : "outline"
-                      }
-                      className="flex-col gap-1 py-4"
+                      Text Chat
+                    </button>
+                    <button
                       onClick={() => setConnectionType("voice")}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 font-semibold text-sm transition-all duration-200 ${
+                        connectionType === "voice"
+                          ? "border-primary/0 text-white shadow-md"
+                          : "border-border/60 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                      }`}
+                      style={
+                        connectionType === "voice"
+                          ? { background: "var(--gradient-hero)", boxShadow: "0 4px 16px var(--glow-primary)" }
+                          : {}
+                      }
                     >
                       <Phone className="h-5 w-5" />
-                      <span className="text-xs">Voice Call</span>
-                    </Button>
+                      Voice Call
+                    </button>
                   </div>
                 </div>
 
                 {/* Connect Button */}
-                <Button
-                  className="w-full"
+                <button
+                  className="btn-premium w-full h-12 rounded-xl font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   onClick={startConnection}
                   disabled={
                     !selectedListener?.availability
@@ -368,7 +419,7 @@ export default function PeerConnectPage() {
                     .includes("available")
                     ? "Connect Now"
                     : "Currently Unavailable"}
-                </Button>
+                </button>
               </div>
             </>
           )}

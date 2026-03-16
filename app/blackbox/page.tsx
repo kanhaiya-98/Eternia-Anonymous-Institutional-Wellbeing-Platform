@@ -334,23 +334,19 @@ export default function BlackboxPage() {
         {/* Header */}
         <div className="mb-8 flex items-center gap-4">
           <Link href="/dashboard">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white/70 hover:text-white hover:bg-white/10"
-            >
+            <button className="w-10 h-10 rounded-xl flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors">
               <ArrowLeft className="h-5 w-5" />
-            </Button>
+            </button>
           </Link>
           <div>
-            <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-400 px-3 py-1 rounded-full text-sm font-medium mb-2">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30 text-teal-400 px-4 py-1.5 rounded-full text-sm font-semibold mb-2">
               <Shield className="w-4 h-4" />
               100% Anonymous
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold">
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight" style={{ background: "linear-gradient(135deg, #5eead4 0%, #a855f7 50%, #ec4899 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
               The Blackbox Portal
             </h1>
-            <p className="text-white/60 mt-1">
+            <p className="text-white/50 mt-1 text-sm">
               Your gateway to anonymous therapy. No name, no face.
             </p>
           </div>
@@ -474,22 +470,23 @@ export default function BlackboxPage() {
                 </Button>
               </>
             ) : connectionState === "idle" ? (
-              <Button
-                size="lg"
-                className="rounded-full px-8 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white"
+              <button
+                className="rounded-full px-10 py-3.5 font-bold text-base text-white transition-all duration-200 hover:-translate-y-1"
+                style={{
+                  background: "linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%)",
+                  boxShadow: "0 8px 32px rgba(20, 184, 166, 0.4)",
+                }}
                 onClick={handleConnect}
               >
                 Begin Anonymous Connection
-              </Button>
+              </button>
             ) : (
-              <Button
-                variant="outline"
-                size="lg"
-                className="rounded-full px-8 bg-white/10 border-white/20 text-white hover:bg-white/20"
+              <button
+                className="rounded-full px-10 py-3.5 font-semibold text-sm bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all duration-200"
                 onClick={handleDisconnect}
               >
                 Cancel
-              </Button>
+              </button>
             )}
           </div>
 
