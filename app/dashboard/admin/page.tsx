@@ -27,7 +27,7 @@ interface DBUser {
   created_at: string;
 }
 
-const ROLES = ["STUDENT", "EXPERT", "INTERN", "SPOC", "ADMIN"];
+const ROLES = ["EXPERT", "INTERN", "SPOC", "ADMIN"];
 
 const roleColors: Record<string, string> = {
   ADMIN:   "bg-purple-500/10 text-purple-500 border-purple-500/20",
@@ -48,7 +48,7 @@ export default function AdminDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState("STUDENT");
+  const [newRole, setNewRole] = useState("EXPERT");
   const [showPw, setShowPw] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
