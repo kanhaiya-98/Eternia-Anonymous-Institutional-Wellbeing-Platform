@@ -1,118 +1,61 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Validate an Eternia institution code against the Supabase `institutions` table.
- * Returns { id, name } if the code is valid and the institution is active.
- * Returns null for any invalid / inactive code (no enumeration information leaked).
+ * Returns an admin-level Supabase client using the service role key.
+ * This bypasses RLS and can call auth.admin.* methods.
  */
-export async function validateEterniaCode(
-  code: string,
-): Promise<{ id: string; name: string } | null> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("institutions")
-    .select("id, name")
-    .eq("eternia_code", code.trim())
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  return { id: data.id as string, name: data.name as string };
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createSupabaseClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 /**
- * Sign up a new Eternia student account.
- *
- * Flow:
- *  1. Call supabase.auth.signUp() — passes username, institution_id and role
- *     as raw_user_meta_data so the `handle_new_user` DB trigger can create the
- *     public.users row automatically.
- *  2. If a deviceFingerprint is supplied, patch the users row with the
- *     encrypted device fingerprint after the trigger has run.
- *
- * The constructed email `{username}@eternia.app` is never surfaced in the UI
- * and is used purely as a stable, globally-unique identifier for Supabase Auth.
- * No real email is collected or stored.
- *
- * Prerequisite: Email confirmation must be DISABLED in the Supabase Auth
- * settings for the project (see supabase/README.md → Step 4).
+ * Sign up a new Eternia student account via the Admin API.
+ * Requires SUPABASE_SERVICE_ROLE_KEY to be set and valid.
+ * The DB trigger (handle_new_user) auto-creates the public.users row.
  */
 export async function signUp(params: {
   username: string;
   password: string;
-  institutionId: string;
-  deviceFingerprint?: string;
+  institutionId: string; // institution UUID (already resolved)
 }): Promise<{ error: string | null }> {
-  const { username, password, institutionId, deviceFingerprint } = params;
-  
-  // Use the service role client so we can use the Admin API to create users and auto-confirm them
-  const { createClient } = await import("@supabase/supabase-js");
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (!serviceRoleKey) {
-    return { error: "Server configuration error: Service role key is missing." };
-  }
-  
-  const adminAuthClient = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
+  const { username, password, institutionId } = params;
 
-  // ── Step 0: Resolve the institution code to a UUID ─────────────────────
-  // The frontend passes the eternia_code (e.g., 'DEMO2025') as institutionId,
-  // but the DB trigger requires a valid UUID. We must look it up first.
-  const { data: instData, error: instError } = await adminAuthClient
-    .from("institutions")
-    .select("id")
-    .eq("eternia_code", institutionId)
-    .single();
+  const admin = getAdminClient();
 
-  if (instError || !instData) {
-    return { error: "Invalid or expired institution code. Please scan again." };
-  }
-
-  const realInstitutionUuid = instData.id;
-
-  // ── Step 1: Create the Supabase Auth user via Admin API ─────────────────
-  // This bypasses the rate limits and requires no email confirmation.
-  const { data, error: authError } = await adminAuthClient.auth.admin.createUser({
+  const { data, error: authError } = await admin.auth.admin.createUser({
     email: `${username.trim().toLowerCase()}@eternia.app`,
     password,
-    email_confirm: true, // Auto-confirm dummy email
+    email_confirm: true, // skip email confirmation entirely
     user_metadata: {
       username: username.trim().toLowerCase(),
-      institution_id: realInstitutionUuid,
+      institution_id: institutionId,
       role: "STUDENT",
     },
   });
 
   if (authError) {
-    // Surface a user-friendly message without leaking internal details.
-    if (authError.message.toLowerCase().includes("already registered") || authError.status === 422) {
+    console.error("[signUp] admin.createUser error:", authError.message);
+    if (
+      authError.message.toLowerCase().includes("already registered") ||
+      authError.message.toLowerCase().includes("already been registered") ||
+      authError.status === 422
+    ) {
       return {
         error: "This username is already taken. Please choose a different one.",
       };
     }
-    return { error: authError.message };
+    return { error: `Signup failed: ${authError.message}` };
   }
 
-  const authUser = data?.user;
-  if (!authUser) {
+  if (!data?.user) {
     return { error: "Account creation failed. Please try again." };
-  }
-
-  // ── Step 2 (optional): Patch device fingerprint ───────────────────────────
-  if (deviceFingerprint) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    await adminAuthClient
-      .from("users")
-      .update({ device_id_encrypted: deviceFingerprint })
-      .eq("id", authUser.id);
   }
 
   return { error: null };
@@ -120,14 +63,15 @@ export async function signUp(params: {
 
 /**
  * Sign in an existing Eternia user using their username and password.
+ * Uses the cookie-based server client (needs valid anon key in .env).
  *
- * Constructs the Supabase Auth email as `{username}@eternia.app` (the same
- * pattern used at registration). The user only ever types their username — no
- * email is shown or collected.
+ * If you see 'Invalid API key', your NEXT_PUBLIC_SUPABASE_ANON_KEY in
+ * .env.local is stale. Go to Supabase Dashboard → Settings → API and
+ * copy the current anon/public key.
  */
 export async function signIn(
   username: string,
-  password: string,
+  password: string
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
 
@@ -137,8 +81,14 @@ export async function signIn(
   });
 
   if (error) {
-    console.error("signIn error:", error);
-    // Return a generic message to prevent user enumeration.
+    console.error("[signIn] error:", error.message);
+    if (error.message.toLowerCase().includes("invalid api key")) {
+      return {
+        error:
+          "Server config error: NEXT_PUBLIC_SUPABASE_ANON_KEY is invalid. " +
+          "Get the correct key from Supabase Dashboard → Settings → API.",
+      };
+    }
     return { error: "Invalid username or password. Please try again." };
   }
 
@@ -146,7 +96,7 @@ export async function signIn(
 }
 
 /**
- * Sign out the currently authenticated user and clear the Supabase session.
+ * Sign out the currently authenticated user.
  */
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
@@ -155,7 +105,6 @@ export async function signOut(): Promise<void> {
 
 /**
  * Get the currently authenticated Supabase Auth user.
- * Returns null if the user is not authenticated.
  */
 export async function getCurrentAuthUser() {
   const supabase = await createClient();
@@ -166,8 +115,7 @@ export async function getCurrentAuthUser() {
 }
 
 /**
- * Fetch the public.users profile record for the currently authenticated user.
- * Returns null if unauthenticated or if the record doesn't exist yet.
+ * Fetch the public.users profile for the currently authenticated user.
  */
 export async function getCurrentUserProfile(): Promise<{
   data: {
@@ -186,24 +134,22 @@ export async function getCurrentUserProfile(): Promise<{
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) {
-    return { data: null, error: "DEBUG: No user from supabase.auth.getUser()" };
+    return { data: null, error: "Not authenticated." };
   }
 
   const { data, error } = await supabase
     .from("users")
     .select(
-      "id, username, role, institution_id, apaar_verified, erp_verified, created_at",
+      "id, username, role, institution_id, apaar_verified, erp_verified, created_at"
     )
     .eq("id", user.id)
     .single();
 
-  if (error) {
-    return { data: null, error: `DEBUG: DB Error: ${error.message}` };
-  }
-  
-  if (!data) {
-    return { data: null, error: "DEBUG: DB query returned NO DATA" };
+  if (error || !data) {
+    console.error("[getCurrentUserProfile] DB error:", error?.message);
+    return { data: null, error: "Could not load user profile." };
   }
 
   return {
@@ -216,6 +162,6 @@ export async function getCurrentUserProfile(): Promise<{
       erp_verified: data.erp_verified as boolean,
       created_at: data.created_at as string,
     },
-    error: null
+    error: null,
   };
 }

@@ -3,7 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Eye, EyeOff, UserPlus, User, Lock, CheckCircle2, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  UserPlus,
+  User,
+  Lock,
+  CheckCircle2,
+  Sparkles,
+} from "lucide-react";
 import { signUp } from "@/lib/auth";
 
 export default function ActivateAccountPage() {
@@ -16,32 +25,65 @@ export default function ActivateAccountPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isFormValid = username.trim().length > 0 && password.length > 0;
+  const isFormValid =
+    username.trim().length >= 3 &&
+    password.length >= 6 &&
+    password === confirmPassword;
 
   const handleSubmit = async () => {
-    if (!isFormValid || password !== confirmPassword) {
-      if (password !== confirmPassword) setError("Passwords do not match");
+    if (!isFormValid) {
+      if (password !== confirmPassword) setError("Passwords do not match.");
+      else if (username.trim().length < 3) setError("Username must be at least 3 characters.");
+      else if (password.length < 6) setError("Password must be at least 6 characters.");
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
-    
-    const eterniaCode = sessionStorage.getItem("eternia_code") || "UNKNOWN";
-    
+
+    // Step 1: Get the institution UUID from the API (resolves eternia_code → UUID)
+    const eterniaCode = sessionStorage.getItem("eternia_code") || "";
+    if (!eterniaCode) {
+      setError("Eternia Code not found. Please go back and enter your code.");
+      setIsLoading(false);
+      return;
+    }
+
+    let institutionId = "";
+    try {
+      const res = await fetch("/api/validate-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: eterniaCode }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.id) {
+        setError(json.error || "Invalid Eternia Code. Please go back and try again.");
+        setIsLoading(false);
+        return;
+      }
+      institutionId = json.id;
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+      setIsLoading(false);
+      return;
+    }
+
+    // Step 2: Create the account
     const { error: signUpError } = await signUp({
       username,
       password,
-      institutionId: eterniaCode
+      institutionId,
     });
-    
+
     setIsLoading(false);
-    
+
     if (signUpError) {
       setError(signUpError);
       return;
     }
-    
+
+    // Success → redirect to login
     router.push("/login");
   };
 
@@ -87,25 +129,35 @@ export default function ActivateAccountPage() {
           <div className="flex flex-col items-center mb-7">
             <div
               className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-              style={{ background: "linear-gradient(135deg, rgba(120,60,220,0.12), rgba(40,200,220,0.08))" }}
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(120,60,220,0.12), rgba(40,200,220,0.08))",
+              }}
             >
               <UserPlus className="w-7 h-7 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground tracking-tight">Activate Account</h2>
-            <p className="text-sm text-muted-foreground mt-1">Set up your credentials to get started</p>
+            <h2 className="text-2xl font-bold text-foreground tracking-tight">
+              Activate Account
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Set up your credentials to get started
+            </p>
           </div>
 
           <div className="space-y-5">
             {/* Username */}
             <div className="space-y-2">
-              <label htmlFor="username" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <label
+                htmlFor="username"
+                className="text-sm font-semibold text-foreground flex items-center gap-1.5"
+              >
                 <User className="w-3.5 h-3.5 text-primary" />
                 Set Username
               </label>
               <Input
                 id="username"
                 type="text"
-                placeholder="Enter your username"
+                placeholder="Enter your username (min 3 chars)"
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value.toLowerCase().replace(/\s/g, "_"));
@@ -114,12 +166,17 @@ export default function ActivateAccountPage() {
                 className="h-12 bg-background/60 border-border/60 focus:border-primary rounded-xl text-base transition-all duration-200"
                 disabled={isLoading}
               />
-              <p className="text-xs text-muted-foreground pl-1">Minimum 3 characters, lowercase only</p>
+              <p className="text-xs text-muted-foreground pl-1">
+                Minimum 3 characters, lowercase only
+              </p>
             </div>
 
             {/* Password */}
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <label
+                htmlFor="password"
+                className="text-sm font-semibold text-foreground flex items-center gap-1.5"
+              >
                 <Lock className="w-3.5 h-3.5 text-primary" />
                 Password
               </label>
@@ -127,7 +184,7 @@ export default function ActivateAccountPage() {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Set new password"
+                  placeholder="Set new password (min 6 chars)"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -142,15 +199,21 @@ export default function ActivateAccountPage() {
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground pl-1">Minimum 6 characters</p>
             </div>
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <label htmlFor="confirm-password" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <label
+                htmlFor="confirm-password"
+                className="text-sm font-semibold text-foreground flex items-center gap-1.5"
+              >
                 <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                 Confirm Password
               </label>
@@ -179,11 +242,17 @@ export default function ActivateAccountPage() {
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
               {passwordsMismatch && (
-                <p className="text-xs text-destructive font-medium pl-1">Passwords do not match</p>
+                <p className="text-xs text-destructive font-medium pl-1">
+                  Passwords do not match
+                </p>
               )}
               {passwordsMatch && (
                 <p className="text-xs text-emerald-500 font-medium pl-1 flex items-center gap-1">
@@ -192,10 +261,17 @@ export default function ActivateAccountPage() {
               )}
             </div>
 
+            {/* Error */}
+            {error && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3">
+                <p className="text-sm text-destructive font-medium">{error}</p>
+              </div>
+            )}
+
             {/* Submit */}
             <button
               onClick={handleSubmit}
-              disabled={!isFormValid || isLoading}
+              disabled={isLoading}
               className="btn-premium w-full h-12 rounded-xl font-semibold text-base text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isLoading ? (

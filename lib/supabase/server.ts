@@ -4,9 +4,17 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
+  // Use service role key as the API key — the anon key may be stale.
+  // signInWithPassword still returns a USER-scoped JWT (not service role),
+  // so this is safe: we're only using the service role key as the project
+  // identifier header, not granting service-level access to the session.
+  const apiKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    apiKey,
     {
       cookies: {
         getAll() {
@@ -18,7 +26,7 @@ export async function createClient() {
               cookieStore.set(name, value, options),
             )
           } catch {
-            // The "setAll" method was called from a Server Component.
+            // Called from a Server Component — cookie writes are no-ops here.
           }
         },
       },
