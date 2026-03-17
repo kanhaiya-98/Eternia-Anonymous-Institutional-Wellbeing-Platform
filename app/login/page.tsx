@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Eye, EyeOff, LogIn, Lock, User, Sparkles } from "lucide-react";
-import { signIn, getCurrentUserProfile } from "@/lib/auth";
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,26 +22,26 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
     
-    const { error: signInError } = await signIn(username, password);
-    
-    if (signInError) {
+    const signInRes = await fetch("/api/auth/signin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    }).then((r) => r.json()).catch(() => ({ error: "Network error. Please try again." }));
+
+    if (signInRes.error) {
       setIsLoading(false);
-      setError(signInError);
+      setError(signInRes.error);
       return;
     }
 
-    // Fetch the user profile to determine their role
-    const profileRes = await getCurrentUserProfile();
-    if (!profileRes.data) {
-      setIsLoading(false);
-      setError(`Failed to retrieve user profile: ${profileRes.error}`);
-      return;
-    }
-    
+    // Fetch profile via API route (server actions cannot be called from client components)
+    const profileRes = await fetch("/api/me").then((r) => r.json()).catch(() => null);
+    const role: string = profileRes?.data?.role || "STUDENT";
+
     setIsLoading(false);
 
     // Route based on role
-    switch (profileRes.data.role) {
+    switch (role) {
       case "STUDENT":
         router.push("/dashboard");
         break;
