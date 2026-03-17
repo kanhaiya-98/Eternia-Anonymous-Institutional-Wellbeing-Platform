@@ -53,7 +53,7 @@ export default function DoctorDashboard() {
   const handleEscalate = async (session: StudentSession) => {
     setEscalating((p) => ({ ...p, [session.id]: true }));
 
-    await fetch("/api/escalate", {
+    const res = await fetch("/api/escalate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -61,10 +61,14 @@ export default function DoctorDashboard() {
         escalatedBy: "Doctor",
         level: session.level,
         sessionInfo: `Student: ${session.username}`,
+        userId: session.id,          // real Supabase UUID → looks up emergency contact
+        username: session.username,
       }),
     });
+    const escalateData = await res.json();
 
-    // Broadcast via Supabase Realtime
+    // Broadcast via Supabase Realtime (carry emergency contact from API response)
+    const ec = escalateData?.emergencyContact || escalateData?.escalation || {};
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -74,11 +78,15 @@ export default function DoctorDashboard() {
       type: "broadcast",
       event: "new_escalation",
       payload: {
+        id: escalateData?.escalation?.id || String(Date.now()),
         eterniaCode: session.eterniaCode,
         escalatedBy: "Doctor",
         level: session.level,
         username: session.username,
         timestamp: new Date().toISOString(),
+        emergency_contact_name: ec.name ?? ec.emergency_contact_name ?? null,
+        emergency_contact_phone: ec.phone ?? ec.emergency_contact_phone ?? null,
+        emergency_contact_relation: ec.relation ?? ec.emergency_contact_relation ?? null,
       },
     });
     supabase.removeChannel(channel);
