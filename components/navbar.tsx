@@ -18,8 +18,8 @@ import { createClient } from "@/lib/supabase/client";
 
 const navLinks = [
   { href: "/dashboard", label: "Home" },
-  { href: "/about", label: "About Us" },
-  { href: "/features", label: "Features" },
+  { href: "/dashboard#about-us", label: "About Us" },
+  { href: "/dashboard#features", label: "Features" },
 ];
 
 export function Navbar() {

@@ -16,6 +16,8 @@ import {
 import Link from "next/link";
 
 export default function DashboardPage() {
+  const heroVideoSrc = "/14852700_1920_1080_...mp4";
+
   const portals = [
     {
       title: "Expert Connect",
@@ -66,27 +68,43 @@ export default function DashboardPage() {
       <Navbar />
 
       {/* ── Hero Section ─────────────────────────────────────────── */}
-      <section className="relative overflow-hidden noise-bg">
+      <section className="relative overflow-hidden min-h-[78vh] md:min-h-[82vh] flex items-center justify-center">
+        {/* Hero background video */}
+        <video
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+        >
+          <source src={heroVideoSrc} type="video/mp4" />
+        </video>
+
+        {/* Readability overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/55" />
+
         {/* Background orbs */}
-        <div className="orb orb-1 w-[700px] h-[700px] -top-48 -left-48 opacity-40" />
-        <div className="orb orb-2 w-[600px] h-[600px] -bottom-40 -right-32 opacity-35" />
-        <div className="orb orb-3 w-[400px] h-[400px] top-20 right-1/3 opacity-20" />
+        <div className="orb orb-1 w-[700px] h-[700px] -top-48 -left-48 opacity-25" />
+        <div className="orb orb-2 w-[600px] h-[600px] -bottom-40 -right-32 opacity-20" />
+        <div className="orb orb-3 w-[400px] h-[400px] top-20 right-1/3 opacity-15" />
 
         <div className="container mx-auto px-4 md:px-6 py-20 md:py-32 relative z-10">
           <div className="max-w-3xl mx-auto text-center space-y-8">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/25 bg-primary/8 text-primary text-sm font-semibold fade-in-up">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/35 bg-white/12 text-white text-sm font-semibold fade-in-up">
               <Sparkles className="w-4 h-4" />
               Mental Wellness Platform
             </div>
 
             {/* Heading */}
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-foreground leading-[1.05] tracking-tight fade-in-up fade-in-up-delay-1">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.05] tracking-tight fade-in-up fade-in-up-delay-1">
               A Safe Space Beyond{" "}
               <span className="gradient-text">Society&apos;s Judgement</span>
             </h1>
 
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed fade-in-up fade-in-up-delay-2">
+            <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed fade-in-up fade-in-up-delay-2">
               Your journey to mental wellness starts here. Connect with experts,
               peers, or explore at your own pace. Complete anonymity guaranteed.
             </p>
@@ -103,7 +121,7 @@ export default function DashboardPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-border/60 hover:border-primary/40 hover:bg-primary/5 rounded-2xl px-8 font-medium transition-all duration-200"
+                  className="border-white/50 bg-white/10 text-white hover:border-white/80 hover:bg-white/20 rounded-2xl px-8 font-medium transition-all duration-200"
                 >
                   Explore Self Help Tools
                 </Button>
@@ -114,11 +132,11 @@ export default function DashboardPage() {
             <div className="flex flex-wrap justify-center gap-8 pt-8 fade-in-up fade-in-up-delay-4">
               {stats.map((stat) => (
                 <div key={stat.label} className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-1.5 text-primary">
+                  <div className="flex items-center gap-1.5 text-white">
                     {stat.icon}
                     <span className="text-2xl font-black">{stat.value}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium">{stat.label}</span>
+                  <span className="text-xs text-white/85 font-medium">{stat.label}</span>
                 </div>
               ))}
             </div>
@@ -127,7 +145,10 @@ export default function DashboardPage() {
       </section>
 
       {/* ── Portal Cards Section ─────────────────────────────────── */}
-      <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
+      <section
+        id="features"
+        className="container mx-auto px-4 md:px-6 py-16 md:py-24 scroll-mt-24"
+      >
         <div className="text-center mb-14">
           <h2 className="text-3xl md:text-4xl font-black text-foreground mb-4 tracking-tight">
             How Can We Help You Today?
@@ -183,7 +204,10 @@ export default function DashboardPage() {
       </section>
 
       {/* ── Ready to Begin Section ───────────────────────────────── */}
-      <section className="container mx-auto px-4 md:px-6 py-16 md:py-20">
+      <section
+        id="about-us"
+        className="container mx-auto px-4 md:px-6 py-16 md:py-20 scroll-mt-24"
+      >
         <div className="text-center space-y-6">
           <h2 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
             Ready to Begin Your Journey?
