@@ -16,7 +16,7 @@ import {
 import Link from "next/link";
 
 export default function DashboardPage() {
-  const heroVideoSrc = "/14852700_1920_1080_...mp4";
+  const heroVideoSrc = "/video.mp4";
 
   const portals = [
     {
