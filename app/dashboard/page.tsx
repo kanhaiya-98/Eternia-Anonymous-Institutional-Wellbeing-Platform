@@ -82,13 +82,13 @@ export default function DashboardPage() {
           <source src={heroVideoSrc} type="video/mp4" />
         </video>
 
-        {/* Readability overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/55" />
+        {/* Readability overlay: lighter so video stays prominent */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/18 to-black/35" />
 
         {/* Background orbs */}
-        <div className="orb orb-1 w-[700px] h-[700px] -top-48 -left-48 opacity-25" />
-        <div className="orb orb-2 w-[600px] h-[600px] -bottom-40 -right-32 opacity-20" />
-        <div className="orb orb-3 w-[400px] h-[400px] top-20 right-1/3 opacity-15" />
+        <div className="orb orb-1 w-[700px] h-[700px] -top-48 -left-48 opacity-14" />
+        <div className="orb orb-2 w-[600px] h-[600px] -bottom-40 -right-32 opacity-12" />
+        <div className="orb orb-3 w-[400px] h-[400px] top-20 right-1/3 opacity-10" />
 
         <div className="container mx-auto px-4 md:px-6 py-20 md:py-32 relative z-10">
           <div className="max-w-3xl mx-auto text-center space-y-8">
